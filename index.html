@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Browser Screen Recorder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Universal Video Recorder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom scrollbar for a cleaner look */
@@ -32,74 +32,93 @@
         }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen flex flex-col items-center py-10 px-4 font-sans text-slate-800">
+<body class="bg-slate-100 min-h-screen flex flex-col items-center py-4 px-4 font-sans text-slate-800">
 
     <!-- Header -->
-    <header class="text-center mb-8">
-        <h1 class="text-4xl font-bold text-slate-800 mb-2">Screen Recorder</h1>
-        <p class="text-slate-500">Secure client-side recording using the getDisplayMedia API</p>
+    <header class="text-center mb-4 md:mb-6">
+        <h1 class="text-2xl md:text-4xl font-bold text-slate-800 mb-1">Universal Recorder</h1>
+        <p class="text-slate-500 text-xs md:text-base">Record Screen or Camera</p>
     </header>
 
     <!-- Main Controller Card -->
     <main class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
         
         <!-- Video Preview Area -->
-        <div class="relative bg-black aspect-video flex items-center justify-center group">
+        <div class="relative bg-black aspect-video flex items-center justify-center group overflow-hidden bg-slate-900">
+            <!-- transform scale-x-[-1] mirrors the camera for a more natural feel, handled in JS -->
             <video id="videoPreview" class="w-full h-full object-contain" autoplay muted playsinline></video>
             
             <!-- Placeholder State -->
-            <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-4 text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 md:h-20 md:w-20 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                <p class="text-lg">Click "Start Recording" to begin</p>
+                <p class="text-sm md:text-lg">Select source below</p>
             </div>
 
             <!-- Recording Indicator (Hidden by default) -->
-            <div id="recordingIndicator" class="hidden absolute top-4 right-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-sm font-medium z-10">
-                <div class="w-3 h-3 bg-red-500 rounded-full recording-active"></div>
+            <div id="recordingIndicator" class="hidden absolute top-4 right-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-xs md:text-sm font-medium z-10">
+                <div class="w-2 h-2 md:w-3 md:h-3 bg-red-500 rounded-full recording-active"></div>
                 <span id="timer">00:00</span>
             </div>
         </div>
 
         <!-- Controls Toolbar -->
-        <div class="p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100">
+        <div class="p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100">
             
-            <!-- Status Message -->
-            <div class="flex-1 order-2 md:order-1 text-center md:text-left">
-                <span id="statusMessage" class="text-slate-500 text-sm font-medium">Ready to record</span>
+            <!-- Settings / Status -->
+            <div class="w-full md:w-auto flex flex-col md:flex-row gap-3 items-center">
+                
+                <!-- Source Selector -->
+                <div class="relative w-full md:w-48">
+                    <select id="sourceSelect" class="w-full appearance-none bg-slate-50 border border-slate-300 text-slate-700 py-3 px-4 pr-8 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-medium cursor-pointer">
+                        <option value="screen">Record Screen</option>
+                        <option value="camera">Record Camera</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                </div>
+                
+                <span id="statusMessage" class="hidden md:block text-slate-500 text-sm font-medium">Ready</span>
             </div>
 
-            <!-- Buttons -->
-            <div class="flex gap-3 order-1 md:order-2">
+            <!-- Action Buttons -->
+            <div class="w-full md:w-auto flex gap-3 justify-center md:justify-end">
                 
-                <button id="startBtn" class="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <button id="startBtn" class="w-full md:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
                     </svg>
-                    Start Recording
+                    Start
                 </button>
 
-                <button id="stopBtn" disabled class="hidden flex items-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button id="stopBtn" disabled class="hidden w-full md:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
                     </svg>
                     Stop
                 </button>
 
-                <a id="downloadBtn" class="hidden flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 cursor-pointer">
+                <a id="downloadBtn" class="hidden w-full md:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 cursor-pointer active:scale-95">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Download
+                    Save
                 </a>
+            </div>
+            
+            <!-- Mobile Status Message (Below buttons on mobile) -->
+            <div class="md:hidden text-center w-full">
+                 <span id="mobileStatusMessage" class="text-slate-500 text-xs font-medium px-2 block">Ready</span>
             </div>
         </div>
     </main>
 
     <!-- Info Section -->
-    <footer class="mt-8 text-center text-slate-400 text-sm max-w-lg">
-        <p>Ensure you select "Share system audio" in the popup if you wish to record computer sound. Recordings are processed locally in your browser.</p>
+    <footer class="mt-6 text-center text-slate-400 text-xs max-w-lg mx-auto px-4">
+        <p class="mb-2"><strong>Android Users:</strong> To record screen, this page must be hosted on a website (HTTPS), not opened as a local file.</p>
+        <p><strong>iOS Users:</strong> Web screen recording is blocked by Apple. Use "Record Camera" or the Control Center.</p>
     </footer>
 
     <script>
@@ -109,9 +128,11 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const videoPreview = document.getElementById('videoPreview');
         const statusMessage = document.getElementById('statusMessage');
+        const mobileStatusMessage = document.getElementById('mobileStatusMessage');
         const placeholder = document.getElementById('placeholder');
         const recordingIndicator = document.getElementById('recordingIndicator');
         const timerDisplay = document.getElementById('timer');
+        const sourceSelect = document.getElementById('sourceSelect');
 
         // State variables
         let mediaRecorder;
@@ -120,15 +141,29 @@
         let startTime;
 
         // Configuration
-        // We prefer 'video/webm' with VP9, falling back to VP8 or standard webm.
         const mimeTypes = [
             'video/webm;codecs=vp9,opus',
             'video/webm;codecs=vp8,opus',
             'video/webm',
-            'video/mp4' // Minimal support in some browsers like Safari
+            'video/mp4'
         ];
 
-        // Helper: Format time as MM:SS
+        // UI Helpers
+        function updateStatus(msg, isError = false) {
+            statusMessage.textContent = msg;
+            mobileStatusMessage.textContent = msg;
+            if (isError) {
+                statusMessage.classList.add('text-red-500');
+                mobileStatusMessage.classList.add('text-red-500');
+                // Shake animation for mobile error visibility
+                mobileStatusMessage.classList.add('animate-pulse');
+                setTimeout(() => mobileStatusMessage.classList.remove('animate-pulse'), 2000);
+            } else {
+                statusMessage.classList.remove('text-red-500');
+                mobileStatusMessage.classList.remove('text-red-500');
+            }
+        }
+
         function formatTime(ms) {
             const totalSeconds = Math.floor(ms / 1000);
             const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -136,7 +171,6 @@
             return `${minutes}:${seconds}`;
         }
 
-        // Helper: Update timer UI
         function startTimer() {
             startTime = Date.now();
             timerInterval = setInterval(() => {
@@ -150,108 +184,152 @@
             timerDisplay.textContent = "00:00";
         }
 
-        // Helper: Find supported MIME type
         function getSupportedMimeType() {
             for (const type of mimeTypes) {
                 if (MediaRecorder.isTypeSupported(type)) {
                     return type;
                 }
             }
-            return ''; // Let browser decide default if none match
+            return '';
         }
 
         // Main Function: Start Recording
         async function startRecording() {
             try {
-                // 1. Get Screen Stream
-                // 'systemAudio: "include"' is a hint to the browser to offer audio sharing
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        mediaSource: 'screen',
-                        displaySurface: 'monitor' // hints to prefer monitor
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        sampleRate: 44100
-                    },
-                    systemAudio: "include" 
-                });
+                updateStatus("Requesting access...");
+                const mode = sourceSelect.value;
+                let stream;
 
-                // 2. Setup UI for recording state
+                if (mode === 'screen') {
+                    // SCREEN RECORDING LOGIC
+                    try {
+                        // Check if function exists (older mobiles lack this)
+                        if (!navigator.mediaDevices?.getDisplayMedia) {
+                            throw new Error("Screen recording is not supported by this browser. Try Chrome on Android.");
+                        }
+
+                        stream = await navigator.mediaDevices.getDisplayMedia({
+                            video: {
+                                mediaSource: 'screen'
+                                // removed 'displaySurface' constraint to be more mobile-friendly
+                            },
+                            audio: {
+                                echoCancellation: false,
+                                noiseSuppression: false,
+                                autoGainControl: false,
+                                sampleRate: 48000,
+                                channelCount: 2
+                            },
+                            systemAudio: "include" 
+                        });
+                        // Remove mirror effect for screen share
+                        videoPreview.style.transform = "scaleX(1)";
+                    } catch (err) {
+                        console.error("Screen Rec Error:", err);
+                        
+                        // Detailed Mobile Error Handling
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        
+                        if (isMobile && (location.protocol === 'file:' || location.protocol === 'content:')) {
+                            throw new Error("Android blocks screen recording from local files. Upload this file to a website.");
+                        }
+                        if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                            throw new Error("iOS does not support web screen recording. Use 'Record Camera' or System Control Center.");
+                        }
+                        if (err.name === 'NotAllowedError') {
+                            throw new Error("Permission denied. You must select a screen to share.");
+                        }
+                        
+                        throw err; // Re-throw generic error if specific ones didn't match
+                    }
+
+                } else {
+                    // CAMERA RECORDING LOGIC (Mobile Friendly)
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: "user", // Default to front camera
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: {
+                            echoCancellation: true, // Better for voice
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+                    // Mirror the camera for natural feel
+                    videoPreview.style.transform = "scaleX(-1)";
+                }
+
+                // UI Updates
                 startBtn.classList.add('hidden');
+                sourceSelect.disabled = true;
                 stopBtn.classList.remove('hidden');
                 stopBtn.disabled = false;
                 downloadBtn.classList.add('hidden');
                 placeholder.classList.add('hidden');
                 recordingIndicator.classList.remove('hidden');
-                statusMessage.textContent = "Recording in progress...";
-                statusMessage.classList.remove('text-red-500');
+                updateStatus("Recording...");
                 
-                // Show live preview (muted to prevent feedback loops)
                 videoPreview.srcObject = stream;
                 videoPreview.muted = true; 
                 videoPreview.play();
 
-                // 3. Initialize MediaRecorder
+                // Initialize MediaRecorder
                 const mimeType = getSupportedMimeType();
-                const options = mimeType ? { mimeType } : undefined;
+                // We use high bitrate for screen, slightly lower/standard for camera to ensure stability
+                const options = {
+                    mimeType: mimeType || undefined,
+                    audioBitsPerSecond: 128000, 
+                    videoBitsPerSecond: mode === 'screen' ? 2500000 : 1500000
+                };
                 
                 try {
                     mediaRecorder = new MediaRecorder(stream, options);
                 } catch (e) {
-                    console.warn('Fallback to default MediaRecorder settings due to error:', e);
+                    console.warn('Fallback to default MediaRecorder settings');
                     mediaRecorder = new MediaRecorder(stream);
                 }
 
                 recordedChunks = [];
 
-                // 4. Handle Data
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
                         recordedChunks.push(event.data);
                     }
                 };
 
-                // 5. Handle Stop (Called via button or browser UI)
                 mediaRecorder.onstop = () => {
                     finalizeRecording();
                 };
 
-                // 6. Handle Stream Ended (User clicks "Stop sharing" in browser chrome)
+                // If user stops sharing via browser UI
                 stream.getVideoTracks()[0].onended = () => {
-                    // Only call stop if recorder is still active
                     if (mediaRecorder.state !== 'inactive') {
                         mediaRecorder.stop();
                     }
                 };
 
-                // 7. Start
-                mediaRecorder.start(1000); // Collect chunks every second
+                mediaRecorder.start(1000);
                 startTimer();
 
             } catch (err) {
-                console.error("Error starting screen capture:", err);
-                statusMessage.classList.add('text-red-500');
+                console.error("Error starting recording:", err);
                 
-                // Friendly error handling for permission policy issues
+                let errorMsg = "Error: " + err.message;
                 if (err.name === 'NotAllowedError' && err.message.includes('permissions policy')) {
-                    statusMessage.innerHTML = '<b>Preview Blocked:</b> Download this file and open it locally to record.';
-                } else if (err.name === 'NotAllowedError') {
-                    statusMessage.textContent = 'Permission denied. You must select a screen to share.';
-                } else {
-                    statusMessage.textContent = "Error: " + err.message;
+                    errorMsg = "Preview Blocked: Download and open locally.";
                 }
+                
+                updateStatus(errorMsg, true);
             }
         }
 
-        // Main Function: Stop Recording
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
             }
             
-            // Stop all tracks to release the "recording" icon in browser tab
             const stream = videoPreview.srcObject;
             if (stream) {
                 const tracks = stream.getTracks();
@@ -260,29 +338,29 @@
             }
         }
 
-        // Helper: Process final video
         function finalizeRecording() {
             stopTimer();
             recordingIndicator.classList.add('hidden');
             
-            // Create Blob
             const blob = new Blob(recordedChunks, {
                 type: mediaRecorder.mimeType || 'video/webm'
             });
 
-            // Create URL for preview and download
             const url = URL.createObjectURL(blob);
             
-            // Update Video Preview to show the recorded clip
             videoPreview.srcObject = null;
             videoPreview.src = url;
-            videoPreview.muted = false; // Unmute so they can hear the recording
+            videoPreview.muted = false;
             videoPreview.controls = true;
+            // Un-mirror for playback regardless of source
+            videoPreview.style.transform = "scaleX(1)"; 
             videoPreview.play();
 
-            // Update UI Buttons
             stopBtn.classList.add('hidden');
             startBtn.classList.remove('hidden');
+            sourceSelect.disabled = false;
+            
+            // Refine "Record Again" button
             startBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a1 1 0 01-1.5.866l-2.5-1.5a1 1 0 010-1.732l2.5-1.5A1 1 0 014 2z" clip-rule="evenodd" />
@@ -291,17 +369,14 @@
                 Record Again
             `;
             
-            // Setup Download Button
             downloadBtn.classList.remove('hidden');
             downloadBtn.href = url;
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            downloadBtn.download = `screen-recording-${timestamp}.webm`;
+            downloadBtn.download = `recording-${timestamp}.webm`;
 
-            statusMessage.textContent = "Recording finished! Download your video.";
-            statusMessage.classList.remove('text-red-500');
+            updateStatus("Recording finished!");
         }
 
-        // Event Listeners
         startBtn.addEventListener('click', startRecording);
         stopBtn.addEventListener('click', stopRecording);
     </script>
