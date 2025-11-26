@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Screen Recorder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Pulse animation for the recording indicator */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .recording-active {
+            animation: pulse-red 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center py-10 px-4 font-sans text-slate-800">
+
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-slate-800 mb-2">Screen Recorder</h1>
+        <p class="text-slate-500">Secure client-side recording using the getDisplayMedia API</p>
+    </header>
+
+    <!-- Main Controller Card -->
+    <main class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        
+        <!-- Video Preview Area -->
+        <div class="relative bg-black aspect-video flex items-center justify-center group">
+            <video id="videoPreview" class="w-full h-full object-contain" autoplay muted playsinline></video>
+            
+            <!-- Placeholder State -->
+            <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p class="text-lg">Click "Start Recording" to begin</p>
+            </div>
+
+            <!-- Recording Indicator (Hidden by default) -->
+            <div id="recordingIndicator" class="hidden absolute top-4 right-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full text-white text-sm font-medium z-10">
+                <div class="w-3 h-3 bg-red-500 rounded-full recording-active"></div>
+                <span id="timer">00:00</span>
+            </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="p-6 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-slate-100">
+            
+            <!-- Status Message -->
+            <div class="flex-1 order-2 md:order-1 text-center md:text-left">
+                <span id="statusMessage" class="text-slate-500 text-sm font-medium">Ready to record</span>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex gap-3 order-1 md:order-2">
+                
+                <button id="startBtn" class="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                    </svg>
+                    Start Recording
+                </button>
+
+                <button id="stopBtn" disabled class="hidden flex items-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd" />
+                    </svg>
+                    Stop
+                </button>
+
+                <a id="downloadBtn" class="hidden flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Info Section -->
+    <footer class="mt-8 text-center text-slate-400 text-sm max-w-lg">
+        <p>Ensure you select "Share system audio" in the popup if you wish to record computer sound. Recordings are processed locally in your browser.</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const videoPreview = document.getElementById('videoPreview');
+        const statusMessage = document.getElementById('statusMessage');
+        const placeholder = document.getElementById('placeholder');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        const timerDisplay = document.getElementById('timer');
+
+        // State variables
+        let mediaRecorder;
+        let recordedChunks = [];
+        let timerInterval;
+        let startTime;
+
+        // Configuration
+        // We prefer 'video/webm' with VP9, falling back to VP8 or standard webm.
+        const mimeTypes = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4' // Minimal support in some browsers like Safari
+        ];
+
+        // Helper: Format time as MM:SS
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${minutes}:${seconds}`;
+        }
+
+        // Helper: Update timer UI
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                timerDisplay.textContent = formatTime(elapsed);
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            timerDisplay.textContent = "00:00";
+        }
+
+        // Helper: Find supported MIME type
+        function getSupportedMimeType() {
+            for (const type of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    return type;
+                }
+            }
+            return ''; // Let browser decide default if none match
+        }
+
+        // Main Function: Start Recording
+        async function startRecording() {
+            try {
+                // 1. Get Screen Stream
+                // 'systemAudio: "include"' is a hint to the browser to offer audio sharing
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        mediaSource: 'screen',
+                        displaySurface: 'monitor' // hints to prefer monitor
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 44100
+                    },
+                    systemAudio: "include" 
+                });
+
+                // 2. Setup UI for recording state
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                stopBtn.disabled = false;
+                downloadBtn.classList.add('hidden');
+                placeholder.classList.add('hidden');
+                recordingIndicator.classList.remove('hidden');
+                statusMessage.textContent = "Recording in progress...";
+                statusMessage.classList.remove('text-red-500');
+                
+                // Show live preview (muted to prevent feedback loops)
+                videoPreview.srcObject = stream;
+                videoPreview.muted = true; 
+                videoPreview.play();
+
+                // 3. Initialize MediaRecorder
+                const mimeType = getSupportedMimeType();
+                const options = mimeType ? { mimeType } : undefined;
+                
+                try {
+                    mediaRecorder = new MediaRecorder(stream, options);
+                } catch (e) {
+                    console.warn('Fallback to default MediaRecorder settings due to error:', e);
+                    mediaRecorder = new MediaRecorder(stream);
+                }
+
+                recordedChunks = [];
+
+                // 4. Handle Data
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                // 5. Handle Stop (Called via button or browser UI)
+                mediaRecorder.onstop = () => {
+                    finalizeRecording();
+                };
+
+                // 6. Handle Stream Ended (User clicks "Stop sharing" in browser chrome)
+                stream.getVideoTracks()[0].onended = () => {
+                    // Only call stop if recorder is still active
+                    if (mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                    }
+                };
+
+                // 7. Start
+                mediaRecorder.start(1000); // Collect chunks every second
+                startTimer();
+
+            } catch (err) {
+                console.error("Error starting screen capture:", err);
+                statusMessage.classList.add('text-red-500');
+                
+                // Friendly error handling for permission policy issues
+                if (err.name === 'NotAllowedError' && err.message.includes('permissions policy')) {
+                    statusMessage.innerHTML = '<b>Preview Blocked:</b> Download this file and open it locally to record.';
+                } else if (err.name === 'NotAllowedError') {
+                    statusMessage.textContent = 'Permission denied. You must select a screen to share.';
+                } else {
+                    statusMessage.textContent = "Error: " + err.message;
+                }
+            }
+        }
+
+        // Main Function: Stop Recording
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            
+            // Stop all tracks to release the "recording" icon in browser tab
+            const stream = videoPreview.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoPreview.srcObject = null;
+            }
+        }
+
+        // Helper: Process final video
+        function finalizeRecording() {
+            stopTimer();
+            recordingIndicator.classList.add('hidden');
+            
+            // Create Blob
+            const blob = new Blob(recordedChunks, {
+                type: mediaRecorder.mimeType || 'video/webm'
+            });
+
+            // Create URL for preview and download
+            const url = URL.createObjectURL(blob);
+            
+            // Update Video Preview to show the recorded clip
+            videoPreview.srcObject = null;
+            videoPreview.src = url;
+            videoPreview.muted = false; // Unmute so they can hear the recording
+            videoPreview.controls = true;
+            videoPreview.play();
+
+            // Update UI Buttons
+            stopBtn.classList.add('hidden');
+            startBtn.classList.remove('hidden');
+            startBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a1 1 0 01-1.5.866l-2.5-1.5a1 1 0 010-1.732l2.5-1.5A1 1 0 014 2z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd" d="M11.5 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1h-6a1 1 0 01-1-1V8zm-5-3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V6a1 1 0 00-1-1H6.5z" clip-rule="evenodd" />
+                </svg>
+                Record Again
+            `;
+            
+            // Setup Download Button
+            downloadBtn.classList.remove('hidden');
+            downloadBtn.href = url;
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            downloadBtn.download = `screen-recording-${timestamp}.webm`;
+
+            statusMessage.textContent = "Recording finished! Download your video.";
+            statusMessage.classList.remove('text-red-500');
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+    </script>
+</body>
+</html>
